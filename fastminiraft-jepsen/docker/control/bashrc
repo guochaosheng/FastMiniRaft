@@ -8,7 +8,7 @@ Welcome to Jepsen on Docker
 To run a test:
    1. control run jepsen build
    2. control run jepsen deploy
-   3. ./run_test.sh
+   3. sh run_test.sh
 EOF
 
 cd /jepsen/fastminiraft-jepsen
