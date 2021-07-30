@@ -20,7 +20,7 @@
   :dependencies [
                  [org.clojure/clojure "1.10.0"]
                  [jepsen "0.1.15-SNAPSHOT"]
-                 [org.nopasserby/fastminiraft-jepsen "0.0.1-SNAPSHOT"]
+                 [org.nopasserby/fastminiraft-jepsen "0.1.1"]
                  ]
   :source-paths ["src" "src/main/clojure"]
   :java-source-paths ["src/main/java"])
