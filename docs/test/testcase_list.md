@@ -22,7 +22,7 @@
 ## 可靠性测试清单
 | 基准测试清单                       | 状态                                                         |
 | :--------------------------------- | :----------------------------------------------------------- |
-| 随机 KILL                          | 待完                                                         |
+| 随机 KILL                          | [已完](https://github.com/guochaosheng/FastMiniRaft/tree/master/docs/test/reliability/testcase_jepsen_kill_random_processes.md) |
 | 随机 KILL 并清空操作系统缓存       | 待完                                                         |
 | 随机集群节点网络分成两半           | [已完](https://github.com/guochaosheng/FastMiniRaft/tree/master/docs/test/reliability/testcase_jepsen_partition_random_halves.md) |
 | 随机将单个节点与网络的其余部分隔离 | [已完](https://github.com/guochaosheng/FastMiniRaft/tree/master/docs/test/reliability/testcase_jepsen_partition_random_node.md) |
