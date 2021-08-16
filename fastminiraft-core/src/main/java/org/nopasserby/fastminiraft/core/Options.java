@@ -16,13 +16,16 @@
 
 package org.nopasserby.fastminiraft.core;
 
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 import java.io.File;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.stream.Collectors;
-
-import javax.annotation.Resource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -242,6 +245,12 @@ public class Options {
             properties.setProperty(resource.name(), field.get(this).toString());
         }
         return properties;
+    }
+    
+    @Target(FIELD)
+    @Retention(RUNTIME)
+    public static @interface Resource {
+        String name() default "";
     }
     
 }
