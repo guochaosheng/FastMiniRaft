@@ -92,6 +92,8 @@ public class ClientServiceImplTest {
             otherOptions.setServerId(server.getServerId());
             otherOptions.setAppDataPath(rootdir);
             otherOptions.setFlushSyncDisk(true);
+            otherOptions.setBufferCapacityOfEntry(64 * 1024);
+            otherOptions.setBufferCapacityOfIndex(64 * 1024);
             
             Node otherNode = new Node(otherOptions, new RpcClient());
             
@@ -235,6 +237,8 @@ public class ClientServiceImplTest {
             otherOptions.setServerId(server.getServerId());
             otherOptions.setAppDataPath(rootdir);
             otherOptions.setFlushSyncDisk(true);
+            otherOptions.setBufferCapacityOfEntry(64 * 1024);
+            otherOptions.setBufferCapacityOfIndex(64 * 1024);
             
             Node otherNode = new Node(otherOptions, new RpcClient());
             

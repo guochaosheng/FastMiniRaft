@@ -32,11 +32,15 @@ public class StoreServiceImplTest {
         Options options = new Options();
         FileUtil.delete(options.getAppDataPath()); // clear history data
         // leader
+        options.setBufferCapacityOfEntry(64 * 1024);
+        options.setBufferCapacityOfIndex(64 * 1024);
         Node node = new Node(options, new RpcClient());
         
         List<Server> servers = new ArrayList<Server>();
         for (Server server: node.getServers()) {
             Options newOptions = new Options();
+            newOptions.setBufferCapacityOfEntry(64 * 1024);
+            newOptions.setBufferCapacityOfIndex(64 * 1024);
             newOptions.setServerId(server.getServerId());
             ConsensusModule consensusModule = new ConsensusModule(new Node(newOptions, new RpcClient()), null, null);
             Server newServer = new Server(server.getServerId(), server.getServerHost(), consensusModule);

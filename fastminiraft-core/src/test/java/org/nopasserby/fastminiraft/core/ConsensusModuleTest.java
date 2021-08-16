@@ -119,21 +119,21 @@ public class ConsensusModuleTest {
         Options options0 = new Options();
         FileUtil.delete(options0.getAppDataPath()); // cleanup history
         
-        Node node0 = new Node(options0, new RpcClient());
         options0.setBufferCapacityOfEntry(128 * 1024);
         options0.setBufferCapacityOfIndex(128 * 1024);
         options0.setServerId(nodeId0);
         options0.setServerCluster(serverCluster);
+        Node node0 = new Node(options0, new RpcClient());
         LogstoreModule node0LogModule = new LogstoreModule(node0);
         
         Options options1 = new Options();
         FileUtil.delete(options1.getAppDataPath()); // cleanup history
         
-        Node node1 = new Node(options1, new RpcClient());
         options1.setBufferCapacityOfEntry(128 * 1024);
         options1.setBufferCapacityOfIndex(128 * 1024);
         options1.setServerCluster(serverCluster);
         options1.setServerId(nodeId1);
+        Node node1 = new Node(options1, new RpcClient());
         LogstoreModule node1LogModule = new LogstoreModule(node1);
         
         StateMachineModule stateMachineModule = new StateMachineModule(node1);
