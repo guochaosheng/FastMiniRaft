@@ -34,8 +34,8 @@ import org.nopasserby.fastminirpc.core.RpcClient;
 public class ClientServiceImplTest {
 
     @Test
-    public void addServerTest() throws Exception {
-        String rootdir = System.getProperty("user.dir") + "/data";
+    public void deleteServerTest() throws Exception {
+        String rootdir = System.getProperty("user.dir") + "/delete_server_testdata";
         FileUtil.delete(rootdir); // clear history data
         
         String serverCluster = "n1-192.168.0.101:6001;n2-192.168.0.102:6001;n3-192.168.0.103:6001;";
@@ -151,7 +151,7 @@ public class ClientServiceImplTest {
         }
         
         // leader node
-        Assert.assertEquals(node.getServerCluster(), "n1-192.168.0.101:6001;n3-192.168.0.103:6001");
+        Assert.assertEquals("n1-192.168.0.101:6001;n3-192.168.0.103:6001", node.getServerCluster());
         
         for (LeaderToFollowerReplicator leaderToFollowerReplicator: otherLeaderToFollowerReplicators.values()) {
             leaderToFollowerReplicator.execute();
@@ -162,7 +162,7 @@ public class ClientServiceImplTest {
                 continue;
             }
             // follower node
-            Assert.assertEquals(otherNode.getServerCluster(), "n1-192.168.0.101:6001;n3-192.168.0.103:6001");
+            Assert.assertEquals("n1-192.168.0.101:6001;n3-192.168.0.103:6001", otherNode.getServerCluster());
         }
         
         for (LogstoreModule logstore :logstoreModules) {
@@ -179,8 +179,8 @@ public class ClientServiceImplTest {
     }
     
     @Test
-    public void deleteServerTest() throws Exception {
-        String rootdir = System.getProperty("user.dir") + "/data";
+    public void addServerTest() throws Exception {
+        String rootdir = System.getProperty("user.dir") + "/add_server_testdata";
         FileUtil.delete(rootdir); // clear history data
         
         String serverCluster = "n1-192.168.0.101:6001;n2-192.168.0.102:6001;n3-192.168.0.103:6001;";
@@ -293,14 +293,14 @@ public class ClientServiceImplTest {
             leaderReplicator.execute1();
         }
         
-        Assert.assertEquals(node.getServerCluster(), "n1-192.168.0.101:6001;n2-192.168.0.102:6001;n3-192.168.0.103:6001;n4-192.168.0.104:6001");
+        Assert.assertEquals("n1-192.168.0.101:6001;n2-192.168.0.102:6001;n3-192.168.0.103:6001;n4-192.168.0.104:6001", node.getServerCluster());
         
         for (LeaderToFollowerReplicator leaderToFollowerReplicator: otherLeaderToFollowerReplicators.values()) {
             leaderToFollowerReplicator.execute();
         }
         
         for (Node otherNode: otherNodes) {
-            Assert.assertEquals(otherNode.getServerCluster(), "n1-192.168.0.101:6001;n2-192.168.0.102:6001;n3-192.168.0.103:6001;n4-192.168.0.104:6001");
+            Assert.assertEquals("n1-192.168.0.101:6001;n2-192.168.0.102:6001;n3-192.168.0.103:6001;n4-192.168.0.104:6001", otherNode.getServerCluster());
         }
         
         for (LogstoreModule logstore :logstoreModules) {
