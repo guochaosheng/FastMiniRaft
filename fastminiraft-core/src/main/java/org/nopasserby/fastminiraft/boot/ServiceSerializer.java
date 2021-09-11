@@ -39,13 +39,8 @@ import org.nopasserby.fastminirpc.core.RpcResponse;
 import org.nopasserby.fastminirpc.core.Serializer;
 import org.nopasserby.fastminirpc.util.ByteUtil;
 
-import io.netty.util.internal.SystemPropertyUtil;
-
 public class ServiceSerializer implements Serializer {
 
-    private static final boolean COMPRESS_SIGNATURE = SystemPropertyUtil.getBoolean("io.rpc.compress.signature", false);
-    
-    private Map<Integer, SimpleEntry<DataSerializer<RpcRequest>, DataSerializer<RpcResponse>>> serializersWithCompressSignature = new HashMap<>();
     private Map<String, SimpleEntry<DataSerializer<RpcRequest>, DataSerializer<RpcResponse>>> serializers = new HashMap<>();
     
     private final static String GET_LEADER = "org.nopasserby.fastminiraft.api.ClientService.getLeaderId";
@@ -83,90 +78,47 @@ public class ServiceSerializer implements Serializer {
     @Override
     public void writeObject(Object obj, DataOutput output) {
         try {            
-            if (COMPRESS_SIGNATURE)
-                writeObjectWhenCompressSignature(obj, output);
-            else 
-                writeObjectWhenSignature(obj, output);
+            if (RpcRequest.class.isInstance(obj)) {
+                RpcRequest request = (RpcRequest) obj;
+                byte[] signature = request.getMethodSignature();
+                output.writeShort(signature.length);
+                output.write(signature);
+                serializers.get(ByteUtil.toString(signature)).getKey().writeObject(request, output);
+            }
+            else if (RpcResponse.class.isInstance(obj)) {
+                RpcResponse response = (RpcResponse) obj;
+                byte[] signature = response.getMethodSignature();
+                output.writeShort(signature.length);
+                output.write(signature);
+                serializers.get(ByteUtil.toString(signature)).getValue().writeObject(response, output);
+            }
         } catch (Exception e) {
             throw new IllegalArgumentException("write object error", e);
         }
     }
     
-    @Override
     public <T> T readObject(DataInput input, Class<T> clazz) {
         try {            
-            return COMPRESS_SIGNATURE ? readObjectWhenCompressSignature(input, clazz) : readObjectWhenSignature(input, clazz);
+            byte[] signature = new byte[input.readShort()];
+            input.readFully(signature);
+            if (RpcRequest.class.isAssignableFrom(clazz)) {
+                RpcRequest request = new RpcRequest(signature);
+                serializers.get(ByteUtil.toString(signature)).getKey().readObject(input, request);
+                return clazz.cast(request);
+            }
+            else if (RpcResponse.class.isAssignableFrom(clazz)) {
+                RpcResponse response = new RpcResponse(signature);
+                serializers.get(ByteUtil.toString(signature)).getValue().readObject(input, response);
+                return clazz.cast(response);
+            }
+            return null;
         } catch (Exception e) {
             throw new IllegalArgumentException("read object error", e);
         }
     }
     
-    private void writeObjectWhenSignature(Object obj, DataOutput output) throws IOException {
-        if (RpcRequest.class.isInstance(obj)) {
-            RpcRequest request = (RpcRequest) obj;
-            byte[] signature = request.getMethodSignature();
-            output.writeShort(signature.length);
-            output.write(signature);
-            serializers.get(ByteUtil.toString(signature)).getKey().writeObject(request, output);
-        }
-        else if (RpcResponse.class.isInstance(obj)) {
-            RpcResponse response = (RpcResponse) obj;
-            byte[] signature = response.getMethodSignature();
-            output.writeShort(signature.length);
-            output.write(signature);
-            serializers.get(ByteUtil.toString(signature)).getValue().writeObject(response, output);
-        }
-    }
-    
-    private void writeObjectWhenCompressSignature(Object obj, DataOutput output) throws IOException {
-        if (RpcRequest.class.isInstance(obj)) {            
-            RpcRequest request = (RpcRequest) obj;
-            Integer signature = ByteUtil.toInt(request.getMethodSignature());
-            output.writeInt(signature);
-            serializersWithCompressSignature.get(signature).getKey().writeObject(request, output);
-        }
-        else if (RpcResponse.class.isInstance(obj)) {
-            RpcResponse response = (RpcResponse) obj;
-            Integer signature = ByteUtil.toInt(response.getMethodSignature());
-            output.writeInt(signature);
-            serializersWithCompressSignature.get(signature).getValue().writeObject(response, output);
-        }
-    }
-    
-    private <T> T readObjectWhenCompressSignature(DataInput input, Class<T> clazz) throws IOException {
-        Integer signature = input.readInt();
-        if (RpcRequest.class.isAssignableFrom(clazz)) {
-            RpcRequest request = new RpcRequest(ByteUtil.toByteArray(signature));
-            serializersWithCompressSignature.get(signature).getKey().readObject(input, request);
-            return clazz.cast(request);
-        }
-        else if (RpcResponse.class.isAssignableFrom(clazz)) {
-            RpcResponse response = new RpcResponse(ByteUtil.toByteArray(signature));
-            serializersWithCompressSignature.get(signature).getValue().readObject(input, response);
-            return clazz.cast(response);
-        }
-        return null;
-    }
-    
-    private <T> T readObjectWhenSignature(DataInput input, Class<T> clazz) throws IOException {
-        byte[] signature = new byte[input.readShort()];
-        input.readFully(signature);
-        if (RpcRequest.class.isAssignableFrom(clazz)) {
-            RpcRequest request = new RpcRequest(signature);
-            serializers.get(ByteUtil.toString(signature)).getKey().readObject(input, request);
-            return clazz.cast(request);
-        }
-        else if (RpcResponse.class.isAssignableFrom(clazz)) {
-            RpcResponse response = new RpcResponse(signature);
-            serializers.get(ByteUtil.toString(signature)).getValue().readObject(input, response);
-            return clazz.cast(response);
-        }
-        return null;
-    }
-    
     private void registerService(String signature, DataSerializer<RpcRequest> requestSerializer, DataSerializer<RpcResponse> responseSerializer) {
         SimpleEntry<DataSerializer<RpcRequest>, DataSerializer<RpcResponse>> entry = new SimpleEntry<>(requestSerializer, responseSerializer);
-        serializersWithCompressSignature.put(signature.hashCode(), entry);
         serializers.put(signature, entry);
     }
     

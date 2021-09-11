@@ -52,15 +52,11 @@ public class RpcClient {
 
     private static Logger logger = LoggerFactory.getLogger(RpcClient.class);
     
-    private static boolean rpcCompressSignature;
-    
     private static long rpcRequestTimeout;
     
     static {
-        rpcCompressSignature = SystemPropertyUtil.getBoolean("io.rpc.compress.signature", false);
         rpcRequestTimeout = SystemPropertyUtil.getLong("io.rpc.request.timeout", 30 * 1000);
         
-        logger.debug("-Dio.rpc.compress.signature: {} ", rpcCompressSignature);
         logger.debug("-Dio.rpc.request.timeout: {}", rpcRequestTimeout);
     }
     
@@ -124,9 +120,6 @@ public class RpcClient {
                 Map<Method, String> methodSignatures = ReflectUtil.getMethodSignatureMap(serviceClass, true);
                 methodSignatures.forEach((method, methodSignature) -> {
                     services.put(method, ByteUtil.toByteArray(methodSignature));
-                    if (rpcCompressSignature) {
-                        services.put(method, ByteUtil.toByteArray(methodSignature.hashCode()));
-                    }
                 });
             }
             

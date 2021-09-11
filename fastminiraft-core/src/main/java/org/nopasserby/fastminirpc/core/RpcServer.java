@@ -41,27 +41,17 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.util.internal.SystemPropertyUtil;
 
 public class RpcServer {
     
     private static Logger logger = LoggerFactory.getLogger(RpcServer.class);
 
-    private static boolean isCompressSignature;
-    
-    static {
-        isCompressSignature = SystemPropertyUtil.getBoolean("io.rpc.compress.signature", false);
-        
-        logger.debug("-Dio.rpc.compress.signature: {}", isCompressSignature);
-    }
-    
     private NettyServer server;
     
     private Set<LifeCycle> serviceWithLifeCycle = new HashSet<LifeCycle>();
     
     private Serializer serializer = SerializerUtil.newJavaSerializer();
     
-    private Map<Integer, Function<Object[], Object>> servicesWithCompressSignature = new HashMap<Integer, Function<Object[], Object>>();
     private Map<String, Function<Object[], Object>> services = new HashMap<String, Function<Object[], Object>>();
     
     private ChannelInboundHandler channelInboundHandler = new SimpleChannelInboundHandler<RemotingCommand>() {
@@ -89,9 +79,6 @@ public class RpcServer {
         methodSignatures.forEach((method, methodSignature) -> {
             Function<Object[], Object> methodProxy = ProxyUtil.newMethodProxy(method, serviceImpl);
             services.putIfAbsent(methodSignature, methodProxy);
-            if (isCompressSignature && servicesWithCompressSignature.putIfAbsent(methodSignature.hashCode(), methodProxy) != null) {
-                throw new IllegalArgumentException("method signature:" + methodSignature.hashCode() + " duplicate");
-            }
         });
         if (LifeCycle.class.isInstance(serviceImpl)) {            
             serviceWithLifeCycle.add((LifeCycle) serviceImpl);
@@ -111,10 +98,7 @@ public class RpcServer {
         
         Object result = null;
         try {
-            if (isCompressSignature) 
-                result = servicesWithCompressSignature.get(ByteUtil.toInt(methodSignature)).apply(parameters);
-            else 
-                result = services.get(ByteUtil.toString(methodSignature)).apply(parameters);
+            result = services.get(ByteUtil.toString(methodSignature)).apply(parameters);
         } catch (Exception e) {
             logger.debug("", e);
             RpcResponse rpcObject = new RpcResponse(methodSignature, e);
