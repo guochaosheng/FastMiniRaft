@@ -66,6 +66,9 @@ public class Options {
     @Resource(name = "requests.queue.depth")
     private Integer queueDepthOfRequests = 64 * 1024;
     
+    @Resource(name = "pending.quorum.capacity")
+    private Integer pendingQuorumCapacity = 512 * 1024;
+    
     @Resource(name = "restore.safe.distance")
     private Long restoreSafeDistance = 4L * 1024 * 1024 * 1024; // 4GB
     
@@ -166,6 +169,14 @@ public class Options {
 
     public void setQueueDepthOfRequests(int queueDepthOfRequests) {
         this.queueDepthOfRequests = queueDepthOfRequests;
+    }
+    
+    public int getPendingQuorumCapacity() {
+        return pendingQuorumCapacity;
+    }
+
+    public void setPendingQuorumCapacity(int pendingQuorumCapacity) {
+        this.pendingQuorumCapacity = pendingQuorumCapacity;
     }
 
     public long getRestoreSafeDistance() {

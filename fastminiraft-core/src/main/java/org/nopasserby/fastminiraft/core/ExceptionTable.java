@@ -26,9 +26,11 @@ public class ExceptionTable {
     
     public final static RequestQueueFullException QUEUE_OF_REQUESTS_FULL = new RequestQueueFullException(1002, "queue of requests full");
     
-    public final static TermChangedException TERM_CHANGED = new TermChangedException(1003, "term changed");
+    public final static PendingQueueFullException QUEUE_OF_PENDING_FULL = new PendingQueueFullException(1003, "queue of pending full");
     
-    public final static InvalidIndexException INVALID_INDEX = new InvalidIndexException(1004, "invalid index");
+    public final static TermChangedException TERM_CHANGED = new TermChangedException(1004, "term changed");
+    
+    public final static InvalidIndexException INVALID_INDEX = new InvalidIndexException(1005, "invalid index");
     
     public final static AbortException ABORT = new AbortException(9999, "abort");
     
@@ -64,6 +66,16 @@ public class ExceptionTable {
         static final long serialVersionUID = 8118205530985317362L;
 
         public RequestQueueFullException(int code, String message) {
+            super(code, message);
+        }
+        
+    }
+    
+    public static class PendingQueueFullException extends OperationException {
+        
+        static final long serialVersionUID = -7220592701575361251L;
+
+        public PendingQueueFullException(int code, String message) {
             super(code, message);
         }
         

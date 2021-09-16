@@ -228,13 +228,15 @@ class LeaderReplicator {
      * */
     private Map<Long, Map<Long, EntryRequest>> replicaTable = new ConcurrentHashMap<Long, Map<Long, EntryRequest>>();
     
-    private BlockingQueue<EntryRequest> queue = new ArrayBlockingQueue<EntryRequest>(64 * 1024);
+    private BlockingQueue<EntryRequest> queue;
     
     private Node node;
     
     private Logstore logstore;
     
     private StateMachine stateMachine;
+    
+    private int pendingQuorumCapacity;
     
     private int appendBatchCapacity;
     
@@ -251,11 +253,18 @@ class LeaderReplicator {
         this.logstore = logstore;
         this.stateMachine = stateMachine;
         this.queue = new ArrayBlockingQueue<EntryRequest>(node.getOptions().getQueueDepthOfRequests());
+        this.pendingQuorumCapacity = node.getOptions().getPendingQuorumCapacity();
         this.appendBatchCapacity = node.getOptions().getFlushMaxEntries();
         this.appendBatch = new ArrayList<EntryRequest>(appendBatchCapacity);
     }
 
     public void appendEntry(int bodyType, byte[] body, BiConsumer<Object, Throwable> action) {
+        Map<Long, EntryRequest> replicaTable = getReplicaTableByTerm(node.getCurrentTerm());
+        if (replicaTable.size() > pendingQuorumCapacity) {
+            action.accept(null, ExceptionTable.QUEUE_OF_PENDING_FULL);
+            return;
+        }
+        
         EntryRequest entryRequest = new EntryRequest();
         entryRequest.timeout = DateUtil.now() + node.getOptions().getQuorumTimeout();
         entryRequest.logEntry = new Entry(bodyType, body);
@@ -390,7 +399,7 @@ class LeaderReplicator {
     }
     
     public Map<Long, EntryRequest> getReplicaTableByTerm(long term) {
-        return replicaTable.computeIfAbsent(term, key -> new ConcurrentHashMap<>());
+        return replicaTable.computeIfAbsent(term, key -> new ConcurrentHashMap<>(pendingQuorumCapacity << 1));
     }
 
     public void shutdown() {
