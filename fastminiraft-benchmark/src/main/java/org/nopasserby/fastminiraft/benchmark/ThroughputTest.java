@@ -20,7 +20,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -33,8 +32,6 @@ import org.nopasserby.fastminiraft.api.StoreService;
 import org.nopasserby.fastminiraft.boot.ServiceSerializer;
 import org.nopasserby.fastminiraft.util.ThreadUtil;
 import org.nopasserby.fastminirpc.core.RpcClient;
-
-import io.netty.util.internal.ConcurrentSet;
 
 public class ThroughputTest {
     
@@ -94,9 +91,7 @@ public class ThroughputTest {
         
         AtomicLong remainCounter = new AtomicLong(messageCount);
         
-        byte[] body = createBody("salt", 128);
-        
-        Set<Long> set = new ConcurrentSet<Long>();
+        byte[] body = createBody("salt", messageSize);
         
         Runnable processor = new Runnable() {
             
@@ -108,8 +103,7 @@ public class ThroughputTest {
                         ThreadUtil.sleep(10);
                     }
                     
-                    long uniqueTimestamp = TimeUtil.uniqueTimestamp();
-                    set.add(uniqueTimestamp);
+                    long startTimestamp = System.currentTimeMillis();
                     CompletableFuture<Long> future = storeService.add(body);
                     
                     blance.incrementAndGet();
@@ -118,12 +112,11 @@ public class ThroughputTest {
                         
                         blance.decrementAndGet();
                         
-                        set.remove(uniqueTimestamp);
-                        
                         if (index != null && index > 0) {
                             statsThroughput.getReceiveResponseSuccessCount().incrementAndGet();
                             
-                            statsThroughput.offerCurrentRT(calculateRT(uniqueTimestamp));
+                            long currentRT = System.currentTimeMillis() - startTimestamp;
+                            statsThroughput.offerCurrentRT(currentRT);
                         } else {
                             statsThroughput.getReceiveResponseFailedCount().incrementAndGet();                           
                         }
@@ -150,11 +143,6 @@ public class ThroughputTest {
             stringBuilder.append((char) b[i % b.length]);
         }
         return stringBuilder.toString().getBytes();
-    }
-    
-    long calculateRT(long timestamp) {
-        long startTimeMillis = (timestamp >> 22) + 1288834974657L;// valid only if timeutil.uniqueTimestamp is used
-        return System.currentTimeMillis() - startTimeMillis;
     }
     
 }
