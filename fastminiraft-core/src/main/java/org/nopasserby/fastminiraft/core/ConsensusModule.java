@@ -39,6 +39,7 @@ import org.nopasserby.fastminiraft.api.VoteResponse;
 import org.nopasserby.fastminiraft.core.ExceptionTable.OperationException;
 import org.nopasserby.fastminiraft.core.Node.ServerChangeListener;
 import org.nopasserby.fastminiraft.util.CollectionUtil;
+import org.nopasserby.fastminiraft.util.DateUtil;
 import org.nopasserby.fastminiraft.util.ThreadUtil;
 import org.nopasserby.fastminirpc.core.LifeCycle;
 import org.slf4j.Logger;
@@ -256,7 +257,7 @@ class LeaderReplicator {
 
     public void appendEntry(int bodyType, byte[] body, BiConsumer<Object, Throwable> action) {
         EntryRequest entryRequest = new EntryRequest();
-        entryRequest.timeout = System.currentTimeMillis() + node.getOptions().getQuorumTimeout();
+        entryRequest.timeout = DateUtil.now() + node.getOptions().getQuorumTimeout();
         entryRequest.logEntry = new Entry(bodyType, body);
         entryRequest.action = action;
         
@@ -367,7 +368,7 @@ class LeaderReplicator {
             return;
         }
        
-        long now = System.currentTimeMillis();
+        long now = DateUtil.now();
         Map<Long, EntryRequest> replicaTable = getReplicaTableByTerm(currentTerm);
         
         // All Servers: If commitIndex > lastApplied: increment lastApplied, apply log[lastApplied] to state machine (§5.3)
@@ -493,7 +494,7 @@ class LeaderToFollowerReplicator extends LoopExecutor {
             return;
         }
         
-        long now = System.currentTimeMillis();
+        long now = DateUtil.now();
         int count = entries.size();
         boolean zeroEntries = !reinitialized && count == 0; // append commit index only
         

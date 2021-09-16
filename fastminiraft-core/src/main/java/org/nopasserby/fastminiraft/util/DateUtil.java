@@ -20,12 +20,15 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
 public class DateUtil {
     
     private final static String YYYYMMDD_HHMMSS_SSS = "yyyy-MM-dd HH:mm:ss:SSS";
     
     private static DateTimeFormatter datetimeFormatter = DateTimeFormatter.ofPattern(YYYYMMDD_HHMMSS_SSS);
+    
+    private static CachedDateTime cachedDateTime = new CachedDateTime();
    
     public static String formatToLongDate(long timestamp) {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(timestamp), ZoneId.systemDefault()).format(datetimeFormatter);
@@ -37,6 +40,42 @@ public class DateUtil {
     
     public static long formatToMilli(String datetime) {
         return LocalDateTime.parse(datetime, datetimeFormatter).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+    
+    public static long now() {
+        return cachedDateTime.nowtime();
+    }
+    
+}
+
+class CachedDateTime {
+    
+    volatile long nowtime = System.currentTimeMillis();
+    
+    CachedDateTime() {
+        Thread thread = new Thread(this::advanceDateTime);
+        thread.setName("thread-nowtime-advance");
+        thread.setPriority(Thread.MAX_PRIORITY);
+        thread.setDaemon(true);
+        thread.start();
+    }
+    
+    void advanceDateTime() {
+        while (true) {
+            nowtime = System.currentTimeMillis();                
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+            }
+        }
+    }
+    
+    public long nowtime() {
+        return nowtime;
+    }
+    
+    public Date now() {
+        return new Date(nowtime);
     }
     
 }

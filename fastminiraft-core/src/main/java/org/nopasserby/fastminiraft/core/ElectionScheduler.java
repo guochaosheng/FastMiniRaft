@@ -68,7 +68,7 @@ public class ElectionScheduler extends LoopExecutor {
     }
     
     public void resetHeartbeatScheduledTimeout() {
-        scheduledTimeout = System.currentTimeMillis() + node.getOptions().getHeartbeatPeriod();
+        scheduledTimeout = DateUtil.now() + node.getOptions().getHeartbeatPeriod();
         logger.debug("term:{}, {} reset heart beat timer and timeout is {} and new schedule time millis is {}.", 
                 node.getCurrentTerm(), node.getRole(), node.getOptions().getHeartbeatPeriod(), DateUtil.formatToLongDate(scheduledTimeout));
     }
@@ -77,7 +77,7 @@ public class ElectionScheduler extends LoopExecutor {
         int minElectionTimeout = node.getOptions().getMinElectionTimeout();
         int maxElectionTimeout = node.getOptions().getMaxElectionTimeout();
         long timeout = minElectionTimeout + ThreadLocalRandom.current().nextInt(0, maxElectionTimeout -  minElectionTimeout);
-        scheduledTimeout = System.currentTimeMillis() + timeout;
+        scheduledTimeout = DateUtil.now() + timeout;
         
         if (!node.isFollower()) {            
             logger.debug("term:{}, {} reset election timer and timeout is {} and new schedule time millis is {}.", 
@@ -91,7 +91,7 @@ public class ElectionScheduler extends LoopExecutor {
     }
     
     public void awaitScheduledTimeout() {
-        while (System.currentTimeMillis() < scheduledTimeout) {
+        while (DateUtil.now() < scheduledTimeout) {
             ThreadUtil.sleep(1);
         }
     }

@@ -26,6 +26,7 @@ import org.nopasserby.fastminiraft.api.Entry;
 import org.nopasserby.fastminiraft.store.BufferedStore;
 import org.nopasserby.fastminiraft.store.SegmentFileStore;
 import org.nopasserby.fastminiraft.store.Store;
+import org.nopasserby.fastminiraft.util.DateUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +118,7 @@ public class LogstoreModule implements Logstore {
             offset = segments.floorKey(Math.max(safeOffset, minOffset));
         }
         logger.debug("log store module reload checkpoint offset: {}", offset);
-        long start = System.currentTimeMillis();
+        long start = DateUtil.now();
         try {
             lastLogIndex = lastLogTerm = -1; // reset
             boolean truncated = false;
@@ -177,7 +178,7 @@ public class LogstoreModule implements Logstore {
         } catch (IOException e) {
             throw new IllegalStateException("log store module: reload excetpion", e);
         }
-        long end = System.currentTimeMillis();
+        long end = DateUtil.now();
         logger.info("log store module restore use time: {} ms", end - start);
     }
 
@@ -203,7 +204,7 @@ public class LogstoreModule implements Logstore {
 
     @Override
     public void append(Entry entry) {
-        long start = System.currentTimeMillis();
+        long start = DateUtil.now();
         try {
             byte[] body = entry.getBody();
             ByteBuffer encodedEntry = ByteBuffer.allocate(ENTRY_INDEX_UNIT + body.length);
@@ -227,7 +228,7 @@ public class LogstoreModule implements Logstore {
         } catch (IOException e) {
             throw new IllegalStateException("log store module: append entry excetpion", e);
         }
-        long end = System.currentTimeMillis();
+        long end = DateUtil.now();
         long usetime = end - start;
         if (usetime > 50) {
             logger.debug("log store append use time: {} ms", usetime);        
@@ -313,11 +314,11 @@ public class LogstoreModule implements Logstore {
 
     @Override
     public void flush() {
-        long start = System.currentTimeMillis();
+        long start = DateUtil.now();
         try {
             entryStore.flush();
             
-            long now = System.currentTimeMillis();
+            long now = DateUtil.now();
             if (now - lastFlushOfIndex > 100) {
                 indexStore.flush();     
                 lastFlushOfIndex = now;
@@ -327,7 +328,7 @@ public class LogstoreModule implements Logstore {
         } catch (IOException e) {
             throw new IllegalStateException("log store module: flush excetpion", e);
         }
-        long end = System.currentTimeMillis();
+        long end = DateUtil.now();
         long usetime = end - start;
         if (usetime > 50) {
             logger.debug("log store flush use time: {} ms", usetime);            

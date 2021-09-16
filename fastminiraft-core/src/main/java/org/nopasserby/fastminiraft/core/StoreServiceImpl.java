@@ -32,6 +32,7 @@ import org.nopasserby.fastminiraft.api.Logstore;
 import org.nopasserby.fastminiraft.api.StoreService;
 import org.nopasserby.fastminiraft.api.AppendEntriesRequest;
 import org.nopasserby.fastminiraft.util.AssertUtil;
+import org.nopasserby.fastminiraft.util.DateUtil;
 import org.nopasserby.fastminiraft.util.FunctionUtil;
 import org.nopasserby.fastminiraft.util.ThreadUtil;
 import org.nopasserby.fastminirpc.core.LifeCycle;
@@ -158,7 +159,7 @@ class ConsensusReadModule implements LifeCycle {
     public CompletableFuture<byte[]> get(byte[] key) {
         CompletableFuture<byte[]> future = new CompletableFuture<byte[]>();
         GetRequest request = new GetRequest();
-        request.getTimeout = System.currentTimeMillis() + node.getOptions().getQuorumTimeout();
+        request.getTimeout = DateUtil.now() + node.getOptions().getQuorumTimeout();
         request.key = key;
         request.future = future;
         
@@ -259,7 +260,7 @@ class ConsensusReadModule implements LifeCycle {
             logger.error("", e);
         }
         
-        long now = System.currentTimeMillis();
+        long now = DateUtil.now();
         
         if (batch != null) {
             for (GetRequest request :batch) {
@@ -283,12 +284,12 @@ class ConsensusReadModule implements LifeCycle {
         
         if (now > timeoutCheckPoint) {
             cleanupTimeout(futureTable);
-            timeoutCheckPoint = System.currentTimeMillis() + timeoutCheckInterval;
+            timeoutCheckPoint = DateUtil.now() + timeoutCheckInterval;
         }
     }
     
     public void cleanupTimeout(Map<Long, Set<GetRequest>> map) {
-        long now = System.currentTimeMillis();
+        long now = DateUtil.now();
         for (Set<GetRequest> batch: map.values()) {
             for (GetRequest request :batch) {
                 if (now > request.getTimeout && !request.future.isDone()) {

@@ -420,12 +420,12 @@ class Server {
         return new ConsensusService() {
             @Override
             public CompletableFuture<VoteResponse> requestVote(VoteRequest request) {
-                lastTimestamp = System.currentTimeMillis();
+                lastTimestamp = DateUtil.now();
                 return consensusService.requestVote(request);
             }
             @Override
             public CompletableFuture<AppendEntriesResponse> appendEntries(AppendEntriesRequest request) {
-                lastTimestamp = System.currentTimeMillis();
+                lastTimestamp = DateUtil.now();
                 return consensusService.appendEntries(request);
             }
         };
@@ -444,7 +444,7 @@ class Server {
     }
 
     public boolean isActiveTimeout() {
-        return System.currentTimeMillis() - lastTimestamp > 10;
+        return DateUtil.now() - lastTimestamp > 10;
     }
 
     public long getLastTimestamp() {
@@ -499,7 +499,7 @@ class RoleChangeReport implements RoleChangeListener {
     
     private Logger logger = LoggerFactory.getLogger(RoleChangeReport.class); 
     
-    private long roleEnableTimeMs = System.currentTimeMillis();
+    private long roleEnableTimeMs = DateUtil.now();
     
     private Map<Role, Long> roleEnableTimeMsTable = new HashMap<>();
     
@@ -514,13 +514,13 @@ class RoleChangeReport implements RoleChangeListener {
         String serverId = node.getServerId();
         long currentTerm = node.getCurrentTerm();
         
-        long newRoleEnableTimeMs = System.currentTimeMillis();
+        long newRoleEnableTimeMs = DateUtil.now();
         logger.info("role changed [server id: {}, term: {}, role: {}, datetime: {}, old role: {}, old role duration: {} ms]", 
                 serverId, currentTerm, newRole, DateUtil.nowOfLongDate(), oldRole, newRoleEnableTimeMs - roleEnableTimeMs);
         
         roleEnableTimeMs = newRoleEnableTimeMs;
         
-        roleEnableTimeMsTable.put(node.getRole(), System.currentTimeMillis());
+        roleEnableTimeMsTable.put(node.getRole(), DateUtil.now());
         if (newRole == Role.LEADER) {
             long electionUsingTimeMs = roleEnableTimeMsTable.get(Role.LEADER) - roleEnableTimeMsTable.get(Role.PREPARED_CANDIDATE);
             logger.info("server id: {}, term: {}, election using {} ms", serverId, currentTerm, electionUsingTimeMs);
