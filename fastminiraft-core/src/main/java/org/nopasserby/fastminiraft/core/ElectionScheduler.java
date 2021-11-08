@@ -17,6 +17,7 @@
 package org.nopasserby.fastminiraft.core;
 
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,10 +25,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.nopasserby.fastminiraft.api.ConsensusService;
 import org.nopasserby.fastminiraft.api.AppendEntriesRequest;
+import org.nopasserby.fastminiraft.api.AppendEntriesResponse;
 import org.nopasserby.fastminiraft.api.VoteRequest;
 import org.nopasserby.fastminiraft.api.VoteResponse;
 import org.nopasserby.fastminiraft.core.Node.Role;
 import org.nopasserby.fastminiraft.util.DateUtil;
+import org.nopasserby.fastminiraft.util.IterableUtil;
 import org.nopasserby.fastminiraft.util.ThreadUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -268,6 +271,31 @@ class ElectionExecutor {
     *    • Upon election: send initial empty AppendEntries RPCs
     *    (heartbeat) to each server; repeat during idle periods to
     *    prevent election timeouts (§5.2)
+    *    
+    * Why check quorum is needed?
+    * 
+    * Follower   Follower   Follower
+    * +-----+    +-----+    +-----+
+    * |  1  |----|  3  |    |  5  |
+    * +-----+    +-----+    +-----+
+    *      \      /
+    *       \    /
+    *       +-----+         +-----+
+    *       |  2  |---------|  4  | Leader
+    *       +-----+         +-----+
+    *     Follower
+    *     
+    * 1 and 3 cannot receive the heartbeat of Leader and will initiate a PreVote request, 
+    * but since 2 can receive the heartbeat of Leader node 4, 2 will not agree to the PreVote request, 
+    * so nodes 1 and 3 cannot get a majority PreVote consent.
+    * 
+    * The problem with this cluster is that it is impossible to elect a new Leader, 
+    * but the old Leader can only AppendEntries to two nodes (2 and itself), 
+    * so it is impossible to reach a majority, and finally the whole cluster becomes unavailable.
+    * 
+    * CheckQuorum ensures that if the current Leader cannot connect to the majority node, 
+    * it will step down and elect a new Leader.
+    * 
     */
     public void executeAsLeader() {
         AtomicContext ctx = node.getAtomicContext();
@@ -276,20 +304,42 @@ class ElectionExecutor {
         }
         scheduler.resetHeartbeatScheduledTimeout();
         
+        int belowQuorum = node.incBelowQuorum();
+        if (belowQuorum > node.getOptions().getCheckQuorum()) {
+            synchronized (node) {
+                node.changeToFollower(ctx.getCurrentTerm());
+                return;
+            }
+        }
+        
         // Upon election: send initial empty AppendEntries RPCs (heartbeat) to each server; 
         //                repeat during idle periods to prevent election timeouts (§5.2)
         Iterable<Server> servers = node.getServers();
+        int serversCount = IterableUtil.newList(servers).size();
+        AtomicInteger heartbeatCount = new AtomicInteger(1); // skip the heartbeat of the current node, accumulate from 1
         for (Server server: servers) {
-            if (server.getServerId().equals(node.getServerId()) || !server.isActiveTimeout() 
+            if (server.getServerId().equals(node.getServerId())
                     || electionThreads.contains(server.getServerId())) {
                 continue;
             }
             
             Runnable heartbeat = () -> {
                 logger.debug("current term:{}, request: {}-{}, heartbeat start", ctx.getCurrentTerm(), server.getServerId(), server.getServerHost());
-                server.getConsensusService().appendEntries(new AppendEntriesRequest(ctx.getCurrentTerm(), ctx.getLeaderId()));
+                CompletableFuture<AppendEntriesResponse> future = server.getConsensusService().appendEntries(new AppendEntriesRequest(ctx.getCurrentTerm(), ctx.getLeaderId()));
                 logger.debug("current term:{}, request: {}-{}, heartbeat end", ctx.getCurrentTerm(), server.getServerId(), server.getServerHost());
                 
+                future.whenComplete((appendEntriesResponse, ex) -> {
+                    if (ex != null) {
+                        logger.debug("reponse: " + server.getServerId() + "-" + server.getServerHost() + " error", ex);
+                        return;
+                    }
+                    if (!appendEntriesResponse.isSuccess()) {
+                        return;
+                    }
+                    if (heartbeatCount.incrementAndGet() > serversCount / 2) {
+                        node.resetBelowQuorum(ctx.getCurrentTerm());                       
+                    }
+                });
                 // TODO discovers server with higher term
                 
                 electionThreads.remove(server.getServerId());

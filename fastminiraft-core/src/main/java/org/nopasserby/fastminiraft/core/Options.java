@@ -60,6 +60,9 @@ public class Options {
     @Resource(name = "quorum.timeout")
     private Long quorumTimeout = 2500L;
     
+    @Resource(name = "check.quorum")
+    private Integer checkQuorum = 12;
+    
     @Resource(name = "replica.timeout")
     private Long replicaTimeout = 1000L;
     
@@ -153,6 +156,14 @@ public class Options {
 
     public void setQuorumTimeout(long quorumTimeout) {
         this.quorumTimeout = quorumTimeout;
+    }
+    
+    public Integer getCheckQuorum() {
+        return checkQuorum;
+    }
+
+    public void setCheckQuorum(Integer checkQuorum) {
+        this.checkQuorum = checkQuorum;
     }
 
     public long getReplicaTimeout() {

@@ -22,16 +22,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.nopasserby.fastminiraft.api.ConsensusService;
-import org.nopasserby.fastminiraft.api.AppendEntriesRequest;
-import org.nopasserby.fastminiraft.api.AppendEntriesResponse;
-import org.nopasserby.fastminiraft.api.VoteRequest;
-import org.nopasserby.fastminiraft.api.VoteResponse;
 import org.nopasserby.fastminiraft.core.Node.Role;
 import org.nopasserby.fastminiraft.core.Node.RoleChangeListener;
 import org.nopasserby.fastminiraft.util.DateUtil;
@@ -93,6 +88,8 @@ public class Node {
     private List<ServerChangeListener> serverChangeListeners;
         
     private volatile AtomicContext atomicContext;
+    
+    private volatile int belowQuorum;
     
     private Options options;
     
@@ -243,6 +240,7 @@ public class Node {
         }
         
         atomicContext = new AtomicContext(currentTerm, isLeader(), leaderId, lastLogIndex, lastLogTerm);
+        belowQuorum = 0;
     }
     
     public boolean changeFollowerToPreCandidate() {
@@ -280,12 +278,12 @@ public class Node {
     }
     
     public boolean changeToFollower(long term, String leaderId) {
-        if (term < currentTerm || (term == currentTerm && leaderId == null)) {
+        if (term < currentTerm) {
             return false;
         }
         
         // candidate discovers current leader
-        if (term == currentTerm && this.leaderId == null) {
+        if (term == currentTerm) {
             this.leaderId = leaderId;
         } else if (term > currentTerm) {
             this.currentTerm = term;
@@ -335,6 +333,15 @@ public class Node {
     
     public boolean isPreCandidate() {
         return role == Role.PREPARED_CANDIDATE;
+    }
+    
+    public int incBelowQuorum() {
+        return ++belowQuorum;
+    }
+    
+    public void resetBelowQuorum(long term) {
+        if (currentTerm == term)
+            this.belowQuorum = 0;
     }
     
     public void updateMatchIndex(long term, String serverId, long matchIndex) {
@@ -408,27 +415,10 @@ class Server {
     
     private final ConsensusService consensus;
     
-    private long lastTimestamp;
-    
     public Server(String serverId, String serverHost, ConsensusService consensusService) {
         this.serverId = serverId;
         this.serverHost = serverHost;
-        this.consensus = newConsensusServiceDelegate(consensusService);
-    }
-    
-    private ConsensusService newConsensusServiceDelegate(ConsensusService consensusService) {
-        return new ConsensusService() {
-            @Override
-            public CompletableFuture<VoteResponse> requestVote(VoteRequest request) {
-                lastTimestamp = DateUtil.now();
-                return consensusService.requestVote(request);
-            }
-            @Override
-            public CompletableFuture<AppendEntriesResponse> appendEntries(AppendEntriesRequest request) {
-                lastTimestamp = DateUtil.now();
-                return consensusService.appendEntries(request);
-            }
-        };
+        this.consensus = consensusService;
     }
     
     public ConsensusService getConsensusService() {
@@ -443,14 +433,6 @@ class Server {
         return serverHost;
     }
 
-    public boolean isActiveTimeout() {
-        return DateUtil.now() - lastTimestamp > 10;
-    }
-
-    public long getLastTimestamp() {
-        return lastTimestamp;
-    }
-    
 }
 
 class AtomicContext {
